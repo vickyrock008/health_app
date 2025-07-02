@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image to Text Conversion</title>
+    <!-- Link to Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+        }
+        .navbar {
+            background: transparent;
+            background: #fff;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        .hero {
+            text-align: center;
+            padding: 100px 20px;
+            background: #fff;
+        }
+        .hero h1 {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+        .btn-primary {
+            background-color: #000;
+            border: none;
+            padding: 10px 30px;
+            font-size: 1rem;
+            border-radius: 5px;
+        }
+        .upload-section {
+            text-align: center;
+            margin-top: 30px;
+        }
+        .download-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .btn-secondary {
+            background-color: #ccc;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            border-radius: 5px;
+            cursor: not-allowed;
+        }
+        .btn-secondary.active {
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+        }
+        #imagePreview {
+            margin-top: 20px;
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg bg-body-tertiary">
+        <div class="container-fluid">
+            <!-- Left-aligned brand -->
+            <a class="navbar-brand p-2" href="/">IMAGE2TEXT</a>
+            <button class="btn btn-dark mx-2">
+                <a href="/history" class="text-light" style="text-decoration: none;">History</a>
+            </button>
+    
+            <!-- Right-aligned buttons -->
+            <div class="d-flex ms-auto">
+                <button class="btn btn-dark mx-2">
+                    <a href="/" class="text-light" style="text-decoration: none;">Home</a>
+                </button>
+                {% if 'user_id' in session %}
+                <button class="btn btn-dark mx-2">
+                    <a href="/logout" class="text-light" style="text-decoration: none;">Logout</a>
+                </button>
+                {% else %}
+                <button class="btn btn-dark mx-2">
+                    <a href="/login" class="text-light" style="text-decoration: none;">Login</a>
+                </button>
+                <button class="btn btn-dark mx-2">
+                    <a href="/register" class="text-light" style="text-decoration: none;">Register</a>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    
+
+    <section class="hero">
+        <h1>Capture & Convert with AI</h1>
+        <p>The ultimate text conversion experience in multiple languages.</p>
+        <div class="upload-section">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <input type="file" id="imageInput" name="image" accept="image/*" class="form-control mb-3" required>
+                <select name="language" class="form-control mb-3" required>
+                    <option value="" disabled selected>Select an language present in the image</option>
+                    <option value="eng">English</option>
+                    <option value="de">German</option>
+                    <option value="fr">French</option>
+                    <option value="hi">Hindi</option>
+                    <option value="ru">Russian</option>
+                    <option value="es">Spanish</option>
+                    <option value="ta">Tamil</option>
+                    <option value="ta">Telugu</option>
+                    <option value="ben">Bengali</option>
+                    <option value="mal">Malayalam</option>
+                </select>
+                <button type="submit" id="convertButton" class="btn btn-primary">Convert</button>
+            </form>
+            <!-- Image preview section -->
+            <div id="imagePreviewSection" class="mt-3" style="display: none;">
+                <h3>Uploaded Image:</h3>
+                <img id="imagePreview" alt="Uploaded Image" />
+            </div>
+        </div>
+        <div id="outputMessage" class="mt-3 text-muted"></div>
+        <div id="outputText" class="mt-3 text-primary"></div>
+        <div id="healthTable" class="table-responsive mt-4" style="display: none;">
+    <h4>Extracted Health Parameters</h4>
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr><th>Parameter</th><th>Value</th><th>Unit</th><th>Reference Range</th></tr>
+        </thead>
+        <tbody id="healthTableBody"></tbody>
+    </table>
+</div>
+<canvas id="trendChart" class="my-4" width="400" height="200"></canvas>
+        <div class="download-buttons">
+            
+            <button id="downloadWord" class="btn btn-dark" disabled>Download Word</button>
+        </div>
+    </section>
+
+    <div class="container text-center my-5">
+        <h1 class="fw-bold">Extract Text from Image</h1>
+        <p class="text-muted fs-3">OCR (Optical Character Recognition) is a technology that extracts text from images and converts it into machine-readable format. It is widely used for digitizing documents, improving accessibility for people with visual impairments, and automating data entry tasks in business settings.</p>
+        <br>
+        <br>
+        <h2 class="my-6 fw-bold mt-3">How to Use Extract Text from Image?</h2>
+        <p class="fs-3  text-muted">Here is a step-by-step guide on how to use our extract text from image tool:</p>
+    
+        <div class="row text-center mt-5">
+          <div class="col-md-4">
+            <div class="card border-0">
+              <div class="card-body">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSzumSx8WAxflUee-a2GFGKEE2l5r_KKZi7VQ&s" alt="Upload Image" class="mb-3 img-fluid rounded">
+                <h5 class="fw-bold">Upload Image</h5>
+                <p class="text-muted">Upload the image from which you want to extract the text.</p>
+              </div>
+            </div>
+          </div>
+    
+          <div class="col-md-4">
+            <div class="card border-0">
+              <div class="card-body">
+                <img src="https://s.smallpdf.com/static/cms/f/102628/400x320/9376ba427c/how-to-do-ocr-on-pdf-for-free.png" alt="Run the Tool" class="mb-3 img-fluid">
+                <h5 class="fw-bold">Run the Tool</h5>
+                <p class="text-muted">To start image text extraction, run the image text extractor by clicking the <b>convert</b> button.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="card border-0">
+              <div class="card-body">
+                <img src="https://play-lh.googleusercontent.com/7ZOGhiRcfGyNYkiqq3YBUeuqCnUkRDNucguJBrV-ri1o-8CJa3eNolAcKBTDotMnqBtM" alt="Download/Copy Text" class="mb-3 img-fluid img-rounded">
+                <h5 class="fw-bold">Download/Copy Text</h5>
+                <p class="text-muted">After conversion, the tool will provide you with digital text that you can either <b>Text</b> or <b>Download word document</b>.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    <!-- Include Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.3/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+
+    function renderHealthTable(data) {
+    const table = document.getElementById('healthTable');
+    const body = document.getElementById('healthTableBody');
+    body.innerHTML = '';
+    if (!data.length) return;
+
+    data.forEach(row => {
+        body.innerHTML += `<tr>
+            <td>${row.parameter}</td>
+            <td>${row.value}</td>
+            <td>${row.unit}</td>
+            <td>${row.range}</td>
+        </tr>`;
+    });
+    table.style.display = 'block';
+    showTrendChart();
+}
+
+function showTrendChart() {
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['May', 'June', 'July'],
+            datasets: [
+                {
+                    label: 'Hemoglobin',
+                    data: [12.5, 13.2, 13.5],
+                    borderColor: 'blue',
+                    fill: false
+                },
+                {
+                    label: 'Cholesterol',
+                    data: [205, 198, 190],
+                    borderColor: 'green',
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { beginAtZero: false } }
+        }
+    });
+}
+
+
+document.getElementById('uploadForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const imageInput = document.getElementById('imageInput');
+    const selectedLanguage = document.querySelector('select[name="language"]').value;
+    const imageFile = imageInput.files[0];
+
+    if (!imageFile) {
+        alert("Please select an image");
+        return;
+    }
+
+    document.getElementById('outputMessage').innerText = 'Extracting text... Please wait.';
+    document.getElementById('convertButton').disabled = true;
+
+    const reader = new FileReader();
+    reader.onload = async function () {
+        const imageData = reader.result;
+
+        const { data: { text } } = await Tesseract.recognize(imageData, selectedLanguage, {
+            logger: m => console.log(m)
+        });
+
+        const response = await fetch('/image_text_to_audio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, language: selectedLanguage })
+        });
+
+        // extend your fetch() logic after image_text_to_audio
+async function extractHealthDataFromText(text) {
+    const response = await fetch('/extract_health_data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+    });
+    const healthData = await response.json();
+    renderHealthTable(healthData);
+}
+
+
+        const result = await response.json();
+        document.getElementById('outputMessage').innerText = '';
+        document.getElementById('outputText').innerText = result.text;
+        extractHealthDataFromText(result.text);
+        if (result.text) {
+            enableDownloadButtons(result);
+        } else {
+            disableDownloadButtons();
+        }
+
+        document.getElementById('convertButton').disabled = false;
+    };
+    reader.readAsDataURL(imageFile);
+});
+
+function enableDownloadButtons(data) {
+    const downloadBtn = document.getElementById('downloadWord');
+    downloadBtn.classList.add('active');
+    downloadBtn.disabled = false;
+    downloadBtn.onclick = () => {
+        fetch('/image_text_to_word', {
+            method: 'POST',
+            body: new URLSearchParams({ text: data.text }),
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'output_text.docx';
+            a.click();
+        });
+    };
+}
+
+function disableDownloadButtons() {
+    const downloadBtn = document.getElementById('downloadWord');
+    downloadBtn.classList.remove('active');
+    downloadBtn.disabled = true;
+}
+
+// Show image preview
+document.getElementById('imageInput').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('imagePreview').src = e.target.result;
+            document.getElementById('imagePreviewSection').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+
+</body>
+</html>
