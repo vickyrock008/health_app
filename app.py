@@ -64,37 +64,7 @@ def logout():
     session.pop('user_id', None)
     return redirect(url_for('index'))
 
-@app.route('/image_text_to_audio', methods=['POST'])
-def image_text_to_audio_route():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
 
-    user_id = session['user_id']
-    data = request.get_json()
-    text = data.get('text', '').strip()
-    selected_language = data.get('language', 'eng')
-
-    if not text:
-        return jsonify({"text": "No text detected", "audio_url": ""})
-
-    language_mapping = {
-        'eng': 'en', 'deu': 'de', 'fra': 'fr', 'hin': 'hi',
-        'rus': 'ru', 'spa': 'es', 'tam': 'ta', 'ben': 'bn', 'mal': 'ml'
-    }
-
-    tts_language = language_mapping.get(selected_language, 'en')
-
-    audio_filename = f"extracted_text_audio_{int(time.time())}.mp3"
-    audio_path = os.path.join(TEMP_DIR, audio_filename)
-
-    tts = gt.gTTS(text=text, lang=tts_language, slow=False)
-    tts.save(audio_path)
-
-    extracted_text = ExtractedText(user_id=user_id, text=text)
-    db.session.add(extracted_text)
-    db.session.commit()
-
-    return jsonify({"text": text, "audio_url": f"/download_audio/{os.path.basename(audio_path)}"})
 
 @app.route('/image_text_to_word', methods=['POST'])
 def image_text_to_word():
