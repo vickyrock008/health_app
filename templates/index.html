@@ -111,6 +111,10 @@
         <div class="upload-section">
             <form id="uploadForm" enctype="multipart/form-data">
                 <input type="file" id="imageInput" name="image" accept="image/*" class="form-control mb-3" required>
+                <select name="language" class="form-control mb-3" required>
+                    <option value="" disabled selected>Select an language present in the image</option>
+                    <option value="eng">English</option>
+                </select>
                 <button type="submit" id="convertButton" class="btn btn-primary">Convert</button>
             </form>
             <!-- Image preview section -->
