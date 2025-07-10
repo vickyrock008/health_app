@@ -68,12 +68,22 @@ def logout():
 
 @app.route('/image_text_to_word', methods=['POST'])
 def image_text_to_word():
+    if 'user_id' not in session:
+        print("User not logged in.")
+        return redirect(url_for('login'))
+    
     text = request.form['text']
+    print(f"[SAVE TEXT] User ID: {session['user_id']} - Text: {text}")
+
+    
+
+    # Save to Word
     doc = Document()
     doc.add_paragraph(text)
     word_filename = f"extracted_text_{int(time.time())}.docx"
     word_path = os.path.join(TEMP_DIR, word_filename)
     doc.save(word_path)
+
     return send_file(word_path, as_attachment=True)
 
 @app.route('/history')
@@ -82,41 +92,29 @@ def user_history():
         return redirect(url_for('login'))
     user_id = session['user_id']
     history = ExtractedText.query.filter_by(user_id=user_id).order_by(ExtractedText.created_at.desc()).all()
+    print(f"[HISTORY] User ID: {user_id} - Found {len(history)} records")
     return render_template('history.html', history=history)
+
+@app.route('/save_extracted_text', methods=['POST'])
+def save_extracted_text():
+    if 'user_id' not in session:
+        return 'Unauthorized', 401
+
+    text = request.form.get('text', '')
+    if not text.strip():
+        return 'No text to save', 400
+
+    extracted = ExtractedText(
+        user_id=session['user_id'],
+        text=text
+    )
+    db.session.add(extracted)
+    db.session.commit()
+    return 'Saved', 200
 
 @app.route('/download_audio/<filename>')
 def download_audio(filename):
     return send_file(os.path.join(TEMP_DIR, filename), as_attachment=True)
-
-# New Route: Extract health parameters
-@app.route('/extract_health_data', methods=['POST'])
-def extract_health_data():
-    import re
-    data = request.get_json()
-    text = data.get('text', '')
-
-    # Enhanced pattern: capture label, value, unit (before/after), and range
-    pattern = r'([A-Z][A-Za-z\s/()]+)[\s:]([\d.]+)\s*([a-zA-Z/%]+)?\s*([(\[]?[\d.]+\s*[-–]\s*[\d.]+[)\]]?)?\s*([a-zA-Z/%]+)?'
-
-    matches = re.findall(pattern, text)
-    parsed = []
-
-    for name, value, unit1, range_str, unit2 in matches:
-        range_cleaned = range_str.replace('(', '').replace(')', '').replace('[', '').replace(']', '').replace('–', '-').strip() if range_str else '-'
-
-        # ✅ Combine units from before/after range
-        final_unit = unit1 or unit2 or '-'
-
-        parsed.append({
-            'parameter': name.strip(),
-            'value': value,
-            'unit': final_unit,
-            'range': range_cleaned
-        })
-
-    return jsonify(parsed)
-
-
 
 if __name__ == '__main__':
     with app.app_context():
